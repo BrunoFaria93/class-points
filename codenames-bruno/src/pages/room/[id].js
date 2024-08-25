@@ -55,11 +55,11 @@ const Room = () => {
     const [socket, setSocket] = useState(null);
     const [gameStatus, setGameStatus] = useState('playing');
     const [blackWordRevealed, setBlackWordRevealed] = useState(false);
+    const [isSpymaster, setIsSpymaster] = useState(false);
     const [revealedBySpymaster, setRevealedBySpymaster] = useState(false);
     const [redCardsRemaining, setRedCardsRemaining] = useState(0);
     const [blueCardsRemaining, setBlueCardsRemaining] = useState(0);
     const [clickedCards, setClickedCards] = useState([]);
-
 
 
     useEffect(() => {
@@ -96,7 +96,6 @@ const Room = () => {
       };
   }, [roomId]);
   
-  
     useEffect(() => {
         const countCards = () => {
             let redCount = 0;
@@ -119,25 +118,32 @@ const Room = () => {
     }, [board]);
     useEffect(() => {
       if (socket) {
-          socket.on('card-clicked', ({ roomId, cardPosition }) => {
-              setClickedCards(prevClickedCards => {
-                  // Verifica se o card já está na lista de clicados
-                  const isCardAlreadyClicked = prevClickedCards.some(
-                      card => card.row === cardPosition.row && card.col === cardPosition.col
-                  );
-  
-                  // Se o card não estiver na lista, adicione-o
-                  if (!isCardAlreadyClicked) {
-                      return [...prevClickedCards, cardPosition];
-                  }
-  
-                  // Se o card já estiver na lista, retorne a lista atual sem alterações
-                  return prevClickedCards;
-              });
+        // Remover listeners antigos para evitar múltiplas adições
+        socket.off('card-clicked');
+        
+        // Adicionar novo listener
+        socket.on('card-clicked', ({ roomId, cardPosition }) => {
+          console.log('Card clicked event received:', cardPosition);
+          setClickedCards(prevClickedCards => {
+            const isCardAlreadyClicked = prevClickedCards.some(
+              card => card.row === cardPosition.row && card.col === cardPosition.col
+            );
+            if (!isCardAlreadyClicked) {
+              console.log('Adding card to clickedCards:', cardPosition);
+              return [...prevClickedCards, cardPosition];
+            }
+            return prevClickedCards;
           });
+        });
       }
-  }, [socket]);
-  
+      
+      return () => {
+        if (socket) {
+          socket.off('card-clicked');
+        }
+      };
+    }, [socket]);
+    
   
   
   
@@ -153,53 +159,65 @@ const Room = () => {
     
     
     const handleCellClick = (row, col) => {
-      if(!revealedBySpymaster){
-        const isAlreadyClicked = clickedCards.some(
-          (card) => card.row === row && card.col === col
-        );
-
-        if (isAlreadyClicked) return;
-
-        setClickedCards((prevClickedCards) => [
-          ...prevClickedCards,
-          { row, col },
-        ]);
-
-        if (socket) {
-          socket.emit("card-clicked", {
-            roomId,
-            cardPosition: { row, col },
-          });
-        }
+      if (revealedBySpymaster) return;
+      if (gameStatus !== 'playing' || blackWordRevealed) return;
+  
+      const clickedCell = board[row][col];
+      if (clickedCell.revealed) return;
+  
+      const newBoard = board.map((rowArr, rowIndex) =>
+          rowArr.map((cell, colIndex) => {
+              if (rowIndex === row && colIndex === col && cell && !cell.revealed) {
+                  return { ...cell, revealed: true };
+              }
+              return cell;
+          })
+      );
+  
+      let updatedGameStatus = gameStatus;
+      let updatedBlackWordRevealed = blackWordRevealed;
+  
+      if (clickedCell.category === 'black') {
+          updatedGameStatus = 'lost';
+          updatedBlackWordRevealed = true;
       }
-
+  
+      setBoard(newBoard);
+      setGameStatus(updatedGameStatus);
+      setBlackWordRevealed(updatedBlackWordRevealed);
+      setClickedCards((prevClickedCards) => [...prevClickedCards, { row, col }]); // Adiciona o card clicado
+  
+      if (socket) {
+          socket.emit('card-clicked', {
+              roomId,
+              cardPosition: { row, col } // Envia a posição do card clicado
+          });
+          socket.emit('update-board', {
+              roomId,
+              board: newBoard,
+              gameStatus: updatedGameStatus,
+              blackWordRevealed: updatedBlackWordRevealed
+          });
+      }
   };
   
   
-  useEffect(() => {
-    console.log('Board state:', board); // Adicione este log
-}, [board]);
-
   
-  const handleResetGame = () => {
-    try {
-        setClickedCards([])
-        const newBoard = generateBoard(words);
-        setBoard(newBoard);
-        setGameStatus('playing');
-        setRevealedBySpymaster(false)
-        setBlackWordRevealed(false);
-        setRedCardsRemaining(9);
-        setBlueCardsRemaining(8);
-
-        if (socket) {
-            socket.emit("reset-board", roomId, newBoard, 'playing', 9, 8);
-        }
-    } catch (error) {
-        console.error('Error generating board:', error); // Adicione este log
-    }
-};
-
+  
+    const handleResetGame = () => {
+      setClickedCards([])
+      const newBoard = generateBoard(words);
+      setBoard(newBoard);
+      setGameStatus('playing');
+      setBlackWordRevealed(false);
+      setRedCardsRemaining(9);
+      setBlueCardsRemaining(8);
+  
+      if (socket) {
+          socket.emit("reset-board", roomId, newBoard, 'playing', 9, 8);
+      }
+  };
+  const shouldShowBorder = isSpymaster && clickedCard && clickedCard.row === rowIndex && clickedCard.col === colIndex;
 
     return (
       <div className="p-0 md:p-4 h-screen w-screen">
