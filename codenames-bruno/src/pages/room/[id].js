@@ -66,7 +66,7 @@ const Room = () => {
     useEffect(() => {
         if (!roomId) return;
 
-        const socketInstance = io('http://hilarious-fishy-handle.glitch.me/', {
+        const socketInstance = io('https://hilarious-fishy-handle.glitch.me/', {
             transports: ['websocket', 'polling'],
         });
 

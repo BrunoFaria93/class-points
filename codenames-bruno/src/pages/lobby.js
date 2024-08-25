@@ -10,7 +10,7 @@ const Lobby = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const socketInstance = io('http://hilarious-fishy-handle.glitch.me/', {
+        const socketInstance = io('https://hilarious-fishy-handle.glitch.me/', {
             transports: ['websocket', 'polling'],
         });
         setSocket(socketInstance);

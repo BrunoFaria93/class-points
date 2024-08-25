@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import io from 'socket.io-client';
 
-const SOCKET_URL = 'http://hilarious-fishy-handle.glitch.me/';
+const SOCKET_URL = 'https://hilarious-fishy-handle.glitch.me/';
 
 const useSocket = (event, callback) => {
     useEffect(() => {
