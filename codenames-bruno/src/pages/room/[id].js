@@ -65,7 +65,7 @@ const Room = () => {
 
 
     useEffect(() => {
-      if (!roomId) return;
+      if (!roomId) return; // Verifica se roomId está definido antes de prosseguir
   
       const socketInstance = io('https://hilarious-fishy-handle.glitch.me/', {
           transports: ['websocket', 'polling'],
@@ -73,22 +73,30 @@ const Room = () => {
   
       setSocket(socketInstance);
   
-      socketInstance.on('connect', () => {
-          console.log('Socket connected:', socketInstance.id);
-          socketInstance.emit('join-room', roomId);
+      socketInstance.emit('join-room', roomId);
+  
+      socketInstance.on('room-data', (data) => {
+          if (data.board) setBoard(data.board);
+          if (data.playerColor) setPlayerColor(data.playerColor);
+          if (data.players) setPlayers(data.players);
+          if (data.gameStatus) setGameStatus(data.gameStatus);
+          if (data.blackWordRevealed !== undefined) setBlackWordRevealed(data.blackWordRevealed);
+          if (data.redCardsRemaining !== undefined) setRedCardsRemaining(data.redCardsRemaining);
+          if (data.blueCardsRemaining !== undefined) setBlueCardsRemaining(data.blueCardsRemaining);
       });
   
-      socketInstance.on('disconnect', () => {
-          console.log('Socket disconnected');
+      socketInstance.on('reset-board', (newBoard, newStatus, newRedCardsRemaining, newBlueCardsRemaining) => {
+          setBoard(newBoard);
+          setGameStatus(newStatus);
+          setBlackWordRevealed(false);
+          setRedCardsRemaining(newRedCardsRemaining);
+          setBlueCardsRemaining(newBlueCardsRemaining);
       });
-  
-      // O restante do código de configuração do socket
   
       return () => {
           socketInstance.disconnect();
       };
   }, [roomId]);
-  
   
     useEffect(() => {
         const countCards = () => {
@@ -112,13 +120,12 @@ const Room = () => {
     }, [board]);
     useEffect(() => {
       console.log('useEffect running');
-  
+      
       if (socket) {
           console.log('Socket is initialized:', socket);
-  
+          
           socket.on('card-clicked', (data) => {
               console.log('Card clicked event received on client:', data);
-              // Atualize o estado com os dados recebidos
           });
   
           return () => {
@@ -129,7 +136,6 @@ const Room = () => {
           };
       }
   }, [socket]);
-  
   
   
     const handleRevealAllClick = () => {
@@ -169,12 +175,11 @@ const Room = () => {
       setBoard(newBoard);
       setGameStatus(updatedGameStatus);
       setBlackWordRevealed(updatedBlackWordRevealed);
-      setClickedCard({ row, col }); // Atualize o estado do card clicado
   
       if (socket) {
           socket.emit('card-clicked', {
               roomId,
-              cardPosition: { row, col }
+              cardPosition: { row, col } // Envia a posição do card clicado
           });
           socket.emit('update-board', {
               roomId,
@@ -184,7 +189,6 @@ const Room = () => {
           });
       }
   };
-  
   
   
     const handleResetGame = () => {
