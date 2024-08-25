@@ -43,24 +43,47 @@ const Lobby = () => {
         }
     };
 
+    const handleDeleteRoom = (roomId) => {
+        socket.emit('delete-room', roomId);
+    };
+
     return (
-        <div>
-            <h1>Lobby</h1>
-            <div>
+        <div className="p-6 max-w-3xl mx-auto">
+            <h1 className="text-3xl font-bold mb-4">Lobby</h1>
+            <div className="mb-6">
                 <input
                     type="text"
                     value={newRoomName}
                     onChange={(e) => setNewRoomName(e.target.value)}
                     placeholder="Enter room name"
+                    className="border border-gray-300 p-2 rounded mr-2 w-2/3"
                 />
-                <button onClick={handleCreateRoom}>Create Room</button>
+                <button
+                    onClick={handleCreateRoom}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                    Create Room
+                </button>
             </div>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            <ul>
+            {error && <p className="text-red-500 mb-4">{error}</p>}
+            <ul className="space-y-2">
                 {rooms.map((room) => (
-                    <li key={room.roomId}>
-                        {room.roomId}
-                        <button onClick={() => handleJoinRoom(room.roomId)}>Join</button>
+                    <li key={room.roomId} className="flex items-center justify-between p-2 border border-gray-300 rounded">
+                        <span>{room.roomId}</span>
+                        <div>
+                            <button
+                                onClick={() => handleJoinRoom(room.roomId)}
+                                className="bg-green-500 text-white px-3 py-1 rounded mr-2 hover:bg-green-600"
+                            >
+                                Join
+                            </button>
+                            <button
+                                onClick={() => handleDeleteRoom(room.roomId)}
+                                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </li>
                 ))}
             </ul>
