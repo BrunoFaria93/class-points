@@ -55,13 +55,11 @@ const Room = () => {
     const [socket, setSocket] = useState(null);
     const [gameStatus, setGameStatus] = useState('playing');
     const [blackWordRevealed, setBlackWordRevealed] = useState(false);
-    const [isSpymaster, setIsSpymaster] = useState(false);
     const [revealedBySpymaster, setRevealedBySpymaster] = useState(false);
     const [redCardsRemaining, setRedCardsRemaining] = useState(0);
     const [blueCardsRemaining, setBlueCardsRemaining] = useState(0);
-    const [isRevealedAll, setIsRevealedAll] = useState(false); // Novo estado
-    const [clickedByOthers, setClickedByOthers] = useState([]);
-    const [clickedCard, setClickedCard] = useState(null);
+    const [clickedCards, setClickedCards] = useState([]);
+
 
 
     useEffect(() => {
@@ -98,6 +96,7 @@ const Room = () => {
       };
   }, [roomId]);
   
+  
     useEffect(() => {
         const countCards = () => {
             let redCount = 0;
@@ -119,23 +118,27 @@ const Room = () => {
         countCards();
     }, [board]);
     useEffect(() => {
-      console.log('useEffect running');
-      
       if (socket) {
-          console.log('Socket is initialized:', socket);
-          
-          socket.on('card-clicked', (data) => {
-              console.log('Card clicked event received on client:', data);
-          });
+          socket.on('card-clicked', ({ roomId, cardPosition }) => {
+              setClickedCards(prevClickedCards => {
+                  // Verifica se o card já está na lista de clicados
+                  const isCardAlreadyClicked = prevClickedCards.some(
+                      card => card.row === cardPosition.row && card.col === cardPosition.col
+                  );
   
-          return () => {
-              if (socket) {
-                  console.log('Cleaning up event listener');
-                  socket.off('card-clicked');
-              }
-          };
+                  // Se o card não estiver na lista, adicione-o
+                  if (!isCardAlreadyClicked) {
+                      return [...prevClickedCards, cardPosition];
+                  }
+  
+                  // Se o card já estiver na lista, retorne a lista atual sem alterações
+                  return prevClickedCards;
+              });
+          });
       }
   }, [socket]);
+  
+  
   
   
     const handleRevealAllClick = () => {
@@ -150,60 +153,53 @@ const Room = () => {
     
     
     const handleCellClick = (row, col) => {
-      if (gameStatus !== 'playing' || blackWordRevealed) return;
-  
-      const clickedCell = board[row][col];
-      if (clickedCell.revealed) return;
-  
-      const newBoard = board.map((rowArr, rowIndex) =>
-          rowArr.map((cell, colIndex) => {
-              if (rowIndex === row && colIndex === col && cell && !cell.revealed) {
-                  return { ...cell, revealed: true };
-              }
-              return cell;
-          })
-      );
-  
-      let updatedGameStatus = gameStatus;
-      let updatedBlackWordRevealed = blackWordRevealed;
-  
-      if (clickedCell.category === 'black') {
-          updatedGameStatus = 'lost';
-          updatedBlackWordRevealed = true;
-      }
-  
-      setBoard(newBoard);
-      setGameStatus(updatedGameStatus);
-      setBlackWordRevealed(updatedBlackWordRevealed);
-  
-      if (socket) {
-          socket.emit('card-clicked', {
-              roomId,
-              cardPosition: { row, col } // Envia a posição do card clicado
+      if(!revealedBySpymaster){
+        const isAlreadyClicked = clickedCards.some(
+          (card) => card.row === row && card.col === col
+        );
+
+        if (isAlreadyClicked) return;
+
+        setClickedCards((prevClickedCards) => [
+          ...prevClickedCards,
+          { row, col },
+        ]);
+
+        if (socket) {
+          socket.emit("card-clicked", {
+            roomId,
+            cardPosition: { row, col },
           });
-          socket.emit('update-board', {
-              roomId,
-              board: newBoard,
-              gameStatus: updatedGameStatus,
-              blackWordRevealed: updatedBlackWordRevealed
-          });
+        }
       }
+
   };
   
   
-    const handleResetGame = () => {
-      const newBoard = generateBoard(words);
-      setBoard(newBoard);
-      setGameStatus('playing');
-      setBlackWordRevealed(false);
-      setRedCardsRemaining(9);
-      setBlueCardsRemaining(8);
+  useEffect(() => {
+    console.log('Board state:', board); // Adicione este log
+}, [board]);
+
   
-      if (socket) {
-          socket.emit("reset-board", roomId, newBoard, 'playing', 9, 8);
-      }
-  };
-  
+  const handleResetGame = () => {
+    try {
+        setClickedCards([])
+        const newBoard = generateBoard(words);
+        setBoard(newBoard);
+        setGameStatus('playing');
+        setRevealedBySpymaster(false)
+        setBlackWordRevealed(false);
+        setRedCardsRemaining(9);
+        setBlueCardsRemaining(8);
+
+        if (socket) {
+            socket.emit("reset-board", roomId, newBoard, 'playing', 9, 8);
+        }
+    } catch (error) {
+        console.error('Error generating board:', error); // Adicione este log
+    }
+};
+
 
     return (
       <div className="p-0 md:p-4 h-screen w-screen">
@@ -246,63 +242,75 @@ const Room = () => {
               <div className="grid grid-cols-5 gap-2 md:gap-5">
                 {board.map((row, rowIndex) =>
                   row.map((cell, colIndex) => (
-<div
-    key={`${rowIndex}-${colIndex}`}
-    onClick={() => handleCellClick(rowIndex, colIndex)}
-    className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in ${
-        (clickedCard && clickedCard.row === rowIndex && clickedCard.col === colIndex && !revealedBySpymaster)
-        ? 'border-4 border-yellow-500'
-        : ''
-    }`}
->
-    <div
-        className={`w-full h-full relative transform-style-preserve-3d transition-transform duration-500 ${
-            cell.revealed || revealedBySpymaster ? 'rotate-y-180' : ''
-        }`}
-    >
-        <div
-            className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                cell.revealed || revealedBySpymaster ? getCellColor(cell.category) : 'bg-white'
-            }`}
-        >
-            <span
-                className={`text-lg ${
-                    cell.revealed || revealedBySpymaster
-                        ? cell.category === 'black'
-                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
-                            : 'text-white font-bold text-xs md:text-base'
-                        : 'text-gray-800 font-bold text-xs md:text-base'
-                }`}
-            >
-                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
-            </span>
-        </div>
-        <div
-            className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                cell.revealed || revealedBySpymaster ? getCellColor(cell.category) : 'bg-white font-bold'
-            }`}
-        >
-            <div
-                className={`absolute bottom-0 w-full h-5 md:h-10 ${
-                    (cell.revealed || revealedBySpymaster) && 'bg-gradient-to-t from-black'
-                }`}
-            ></div>
-            <span
-                className={`text-lg ${
-                    cell.revealed || revealedBySpymaster
-                        ? cell.category === 'black'
-                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
-                            : 'text-white absolute bottom-0 rounded-lg px-2 opacity-70 font-bold text-xs md:text-base'
-                        : 'text-gray-800 font-bold text-xs md:text-base'
-                }`}
-            >
-                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
-            </span>
-        </div>
-    </div>
-</div>
-
-
+                    <div
+                      key={`${rowIndex}-${colIndex}`}
+                      onClick={() => handleCellClick(rowIndex, colIndex)}
+                      className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in ${
+                        clickedCards.some(
+                          (card) =>
+                            card.row === rowIndex &&
+                            card.col === colIndex &&
+                            revealedBySpymaster
+                        ) // Verifica se o card está na lista de clicados
+                          ? "border-4 border-yellow-500"
+                          : ""
+                      }`}
+                    >
+                      <div
+                        className={`w-full h-full relative transform-style-preserve-3d transition-transform duration-500 ${
+                          cell.revealed || revealedBySpymaster
+                            ? "rotate-y-180"
+                            : ""
+                        }`}
+                      >
+                        <div
+                          className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
+                            cell.revealed || revealedBySpymaster
+                              ? getCellColor(cell.category)
+                              : "bg-white"
+                          }`}
+                        >
+                          <span
+                            className={`text-lg ${
+                              cell.revealed || revealedBySpymaster
+                                ? cell.category === "black"
+                                  ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
+                                  : "text-white font-bold text-xs md:text-base"
+                                : "text-gray-800 font-bold text-xs md:text-base"
+                            }`}
+                          >
+                            {cell.word.charAt(0).toUpperCase() +
+                              cell.word.slice(1)}
+                          </span>
+                        </div>
+                        <div
+                          className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
+                            cell.revealed || revealedBySpymaster
+                              ? getCellColor(cell.category)
+                              : "bg-white font-bold"
+                          }`}
+                        >
+                          <div
+                            className={`absolute bottom-0 w-full h-5 md:h-10 ${
+                              (cell.revealed || revealedBySpymaster) &&
+                              "bg-gradient-to-t from-black"
+                            }`}
+                          ></div>
+                          <span
+                            className={`text-lg ${
+                              cell.revealed || revealedBySpymaster
+                                ? cell.category === "black"
+                                  ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
+                                  : "text-white absolute bottom-0 rounded-lg px-2 opacity-70 font-bold text-xs md:text-base"
+                                : "text-gray-800 font-bold text-xs md:text-base"
+                            }`}
+                          >
+                            {cell.word.charAt(0).toUpperCase() +
+                              cell.word.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   ))
                 )}
               </div>
