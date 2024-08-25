@@ -9,7 +9,7 @@ const Lobby = () => {
         console.log('Rooms update received in Lobby:', roomsData);
         setRooms(roomsData);
     });
-
+    console.log("rooms",rooms)
     const createRoom = () => {
         if (newRoomName.trim()) {
             console.log("entrei nesse if ")

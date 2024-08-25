@@ -66,7 +66,7 @@ const Room = () => {
     useEffect(() => {
         if (!roomId) return;
 
-        const socketInstance = io('http://localhost:4000', {
+        const socketInstance = io('http://hilarious-fishy-handle.glitch.me/', {
             transports: ['websocket', 'polling'],
         });
 
@@ -191,10 +191,10 @@ const Room = () => {
         }
     };
 
-    
+    console.log("board",board)
     return (
-      <div className="p-4">
-        <div className="flex w-full h-32 gap-x-4">
+      <div className="p-0 md:p-4 h-screen w-screen">
+        <div className="flex flex-col md:flex-row w-screen gap-x-4">
           <div className="flex flex-col">
             <h1 className="text-4xl font-bold mb-4">
               Room: {roomId || "Loading..."}
@@ -213,32 +213,30 @@ const Room = () => {
             <p className="text-[#60a5fa] font-bold">
               Blue Cards Remaining: {blueCardsRemaining}
             </p>
+            <div className="flex gap-x-2 mt-1">
+              <button
+                onClick={handleRevealAllClick}
+                className="bg-[#60a5fa] hover:bg-[#147af8] transition ease-in px-4 text-white rounded h-8"
+              >
+                Spymaster
+              </button>
+              <button
+                onClick={handleResetGame}
+                className="bg-[#f87171] hover:bg-[#f42727] transition ease-in px-4 text-white rounded h-8"
+              >
+                Reset
+              </button>
+            </div>
           </div>
-
-          <button
-            onClick={handleRevealAllClick}
-            className="bg-[#60a5fa] hover:bg-[#147af8] transition ease-in px-4 py-2 text-white rounded ml-auto h-10"
-          >
-            Spymaster
-          </button>
-          <button
-            onClick={handleResetGame}
-            className="bg-[#f87171] hover:bg-[#f42727] transition ease-in px-4 py-2 text-white rounded h-10"
-          >
-            Reset
-          </button>
-        </div>
-
-        <div className="w-full h-full flex justify-center items-center">
-          <div>
+          <div className="w-full h-full flex justify-center items-center mr-60 mt-20 md:mt-0">
             {board.length > 0 ? (
-              <div className="grid grid-cols-5 gap-5">
+              <div className="grid grid-cols-5 gap-2 md:gap-5">
                 {board.map((row, rowIndex) =>
                   row.map((cell, colIndex) => (
                     <div
                       key={`${rowIndex}-${colIndex}`}
                       onClick={() => handleCellClick(rowIndex, colIndex)}
-                      className={`w-32 h-24 perspective hover:scale-110 transition-all ease-in`}
+                      className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in`}
                     >
                       <div
                         className={`w-full h-full relative transform-style-preserve-3d transition-transform duration-500 ${
@@ -247,6 +245,7 @@ const Room = () => {
                             : ""
                         }`}
                       >
+                        {/* Front Side */}
                         <div
                           className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
                             cell.revealed || revealedBySpymaster
@@ -258,31 +257,42 @@ const Room = () => {
                             className={`text-lg ${
                               cell.revealed || revealedBySpymaster
                                 ? cell.category === "black"
-                                  ? "text-white font-bold"
-                                  : "text-black"
-                                : "text-gray-800 font-bold"
+                                  ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
+                                  : "text-white font-bold text-xs md:text-base"
+                                : "text-gray-800 font-bold text-xs md:text-base"
                             }`}
                           >
-                            {cell.word}
+                            {cell.word.charAt(0).toUpperCase() +
+                              cell.word.slice(1)}
                           </span>
                         </div>
+
+                        {/* Back Side */}
                         <div
                           className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
                             cell.revealed || revealedBySpymaster
                               ? getCellColor(cell.category)
-                              : "bg-white"
+                              : "bg-white font-bold"
                           }`}
                         >
+                          {/* Gradient for revealed cards */}
+                          <div
+                            className={`absolute bottom-0 w-full h-5 md:h-10 ${
+                              (cell.revealed || revealedBySpymaster) &&
+                              "bg-gradient-to-t from-black"
+                            }`}
+                          ></div>
                           <span
                             className={`text-lg ${
                               cell.revealed || revealedBySpymaster
                                 ? cell.category === "black"
-                                  ? "text-white font-bold"
-                                  : "text-black"
-                                : "text-gray-800 font-bold"
+                                  ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
+                                  : "text-white absolute bottom-0 rounded-lg px-2 opacity-70 font-bold text-xs md:text-base"
+                                : "text-gray-800 font-bold text-xs md:text-base"
                             }`}
                           >
-                            {cell.word}
+                            {cell.word.charAt(0).toUpperCase() +
+                              cell.word.slice(1)}
                           </span>
                         </div>
                       </div>
@@ -302,13 +312,13 @@ const Room = () => {
 const getCellColor = (category) => {
     switch (category) {
         case "red":
-            return "bg-[#f87171]";
+            return "bg-[url('/images/redCard.png')] bg-cover bg-no-repeat bg-center";
         case "blue":
-            return "bg-[#60a5fa]";
+            return "bg-[url('/images/blueCard2.png')] bg-cover bg-no-repeat bg-center";
         case "black":
-            return "bg-black";
+            return "bg-[url('/images/deathCard.png')] bg-cover bg-no-repeat bg-center";
         default:
-            return "bg-[#d1d5db]";
+            return "bg-[url('/images/grayCard.jpg')] bg-cover bg-no-repeat bg-center";
     }
 };
 
