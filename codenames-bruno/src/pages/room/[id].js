@@ -61,12 +61,11 @@ const Room = () => {
     const [blueCardsRemaining, setBlueCardsRemaining] = useState(0);
     const [isRevealedAll, setIsRevealedAll] = useState(false); // Novo estado
     const [clickedByOthers, setClickedByOthers] = useState([]);
+    const [clickedCard, setClickedCard] = useState(null);
 
-
-    console.log("revealedBySpymaster",revealedBySpymaster)
 
     useEffect(() => {
-      if (!roomId) return; // Verifica se roomId está definido antes de prosseguir
+      if (!roomId) return;
   
       const socketInstance = io('https://hilarious-fishy-handle.glitch.me/', {
           transports: ['websocket', 'polling'],
@@ -74,30 +73,22 @@ const Room = () => {
   
       setSocket(socketInstance);
   
-      socketInstance.emit('join-room', roomId);
-  
-      socketInstance.on('room-data', (data) => {
-          if (data.board) setBoard(data.board);
-          if (data.playerColor) setPlayerColor(data.playerColor);
-          if (data.players) setPlayers(data.players);
-          if (data.gameStatus) setGameStatus(data.gameStatus);
-          if (data.blackWordRevealed !== undefined) setBlackWordRevealed(data.blackWordRevealed);
-          if (data.redCardsRemaining !== undefined) setRedCardsRemaining(data.redCardsRemaining);
-          if (data.blueCardsRemaining !== undefined) setBlueCardsRemaining(data.blueCardsRemaining);
+      socketInstance.on('connect', () => {
+          console.log('Socket connected:', socketInstance.id);
+          socketInstance.emit('join-room', roomId);
       });
   
-      socketInstance.on('reset-board', (newBoard, newStatus, newRedCardsRemaining, newBlueCardsRemaining) => {
-          setBoard(newBoard);
-          setGameStatus(newStatus);
-          setBlackWordRevealed(false);
-          setRedCardsRemaining(newRedCardsRemaining);
-          setBlueCardsRemaining(newBlueCardsRemaining);
+      socketInstance.on('disconnect', () => {
+          console.log('Socket disconnected');
       });
+  
+      // O restante do código de configuração do socket
   
       return () => {
           socketInstance.disconnect();
       };
   }, [roomId]);
+  
   
     useEffect(() => {
         const countCards = () => {
@@ -119,23 +110,28 @@ const Room = () => {
 
         countCards();
     }, [board]);
-
     useEffect(() => {
-        if (socket) {
-            // Escuta o evento de reset
-            socket.on('reset-board', (newBoard) => {
-                setBoard(newBoard);
-            });
-        }
-    
-        // Limpa o listener ao desmontar o componente
-        return () => {
-            if (socket) {
-                socket.off('reset-board');
-            }
-        };
-    }, [socket]);
-
+      console.log('useEffect running');
+  
+      if (socket) {
+          console.log('Socket is initialized:', socket);
+  
+          socket.on('card-clicked', (data) => {
+              console.log('Card clicked event received on client:', data);
+              // Atualize o estado com os dados recebidos
+          });
+  
+          return () => {
+              if (socket) {
+                  console.log('Cleaning up event listener');
+                  socket.off('card-clicked');
+              }
+          };
+      }
+  }, [socket]);
+  
+  
+  
     const handleRevealAllClick = () => {
         // Alterna o estado revealedBySpymaster
         setRevealedBySpymaster(!revealedBySpymaster);
@@ -173,12 +169,23 @@ const Room = () => {
       setBoard(newBoard);
       setGameStatus(updatedGameStatus);
       setBlackWordRevealed(updatedBlackWordRevealed);
+      setClickedCard({ row, col }); // Atualize o estado do card clicado
   
       if (socket) {
-          socket.emit('update-board', { roomId, board: newBoard, gameStatus: updatedGameStatus, blackWordRevealed: updatedBlackWordRevealed });
-          socket.emit('card-clicked', { row, col });
+          socket.emit('card-clicked', {
+              roomId,
+              cardPosition: { row, col }
+          });
+          socket.emit('update-board', {
+              roomId,
+              board: newBoard,
+              gameStatus: updatedGameStatus,
+              blackWordRevealed: updatedBlackWordRevealed
+          });
       }
   };
+  
+  
   
     const handleResetGame = () => {
       const newBoard = generateBoard(words);
@@ -194,7 +201,6 @@ const Room = () => {
   };
   
 
-    console.log("board",board)
     return (
       <div className="p-0 md:p-4 h-screen w-screen">
         <div className="flex flex-col md:flex-row w-screen gap-x-4">
@@ -236,72 +242,63 @@ const Room = () => {
               <div className="grid grid-cols-5 gap-2 md:gap-5">
                 {board.map((row, rowIndex) =>
                   row.map((cell, colIndex) => (
-                    <div
-                    key={`${rowIndex}-${colIndex}`}
-                    onClick={() => handleCellClick(rowIndex, colIndex)}
-                    className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in ${
-                        clickedByOthers.some(clicked => clicked.row === rowIndex && clicked.col === colIndex)
-                            ? 'border-4 border-yellow-500'
-                            : ''
-                    }`}
-                >
-                    <div
-                        className={`w-full h-full relative transform-style-preserve-3d transition-transform duration-500 ${
-                            cell.revealed || revealedBySpymaster
-                                ? 'rotate-y-180'
-                                : ''
-                        }`}
-                    >
-                        {/* Front Side */}
-                        <div
-                            className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                                cell.revealed || revealedBySpymaster
-                                    ? getCellColor(cell.category)
-                                    : 'bg-white'
-                            }`}
-                        >
-                            <span
-                                className={`text-lg ${
-                                    cell.revealed || revealedBySpymaster
-                                        ? cell.category === 'black'
-                                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
-                                            : 'text-white font-bold text-xs md:text-base'
-                                        : 'text-gray-800 font-bold text-xs md:text-base'
-                                }`}
-                            >
-                                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
-                            </span>
-                        </div>
-                
-                        {/* Back Side */}
-                        <div
-                            className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                                cell.revealed || revealedBySpymaster
-                                    ? getCellColor(cell.category)
-                                    : 'bg-white font-bold'
-                            }`}
-                        >
-                            {/* Gradient for revealed cards */}
-                            <div
-                                className={`absolute bottom-0 w-full h-5 md:h-10 ${
-                                    (cell.revealed || revealedBySpymaster) && 'bg-gradient-to-t from-black'
-                                }`}
-                            ></div>
-                            <span
-                                className={`text-lg ${
-                                    cell.revealed || revealedBySpymaster
-                                        ? cell.category === 'black'
-                                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
-                                            : 'text-white absolute bottom-0 rounded-lg px-2 opacity-70 font-bold text-xs md:text-base'
-                                        : 'text-gray-800 font-bold text-xs md:text-base'
-                                }`}
-                            >
-                                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                
+<div
+    key={`${rowIndex}-${colIndex}`}
+    onClick={() => handleCellClick(rowIndex, colIndex)}
+    className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in ${
+        (clickedCard && clickedCard.row === rowIndex && clickedCard.col === colIndex && !revealedBySpymaster)
+        ? 'border-4 border-yellow-500'
+        : ''
+    }`}
+>
+    <div
+        className={`w-full h-full relative transform-style-preserve-3d transition-transform duration-500 ${
+            cell.revealed || revealedBySpymaster ? 'rotate-y-180' : ''
+        }`}
+    >
+        <div
+            className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
+                cell.revealed || revealedBySpymaster ? getCellColor(cell.category) : 'bg-white'
+            }`}
+        >
+            <span
+                className={`text-lg ${
+                    cell.revealed || revealedBySpymaster
+                        ? cell.category === 'black'
+                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
+                            : 'text-white font-bold text-xs md:text-base'
+                        : 'text-gray-800 font-bold text-xs md:text-base'
+                }`}
+            >
+                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
+            </span>
+        </div>
+        <div
+            className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
+                cell.revealed || revealedBySpymaster ? getCellColor(cell.category) : 'bg-white font-bold'
+            }`}
+        >
+            <div
+                className={`absolute bottom-0 w-full h-5 md:h-10 ${
+                    (cell.revealed || revealedBySpymaster) && 'bg-gradient-to-t from-black'
+                }`}
+            ></div>
+            <span
+                className={`text-lg ${
+                    cell.revealed || revealedBySpymaster
+                        ? cell.category === 'black'
+                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
+                            : 'text-white absolute bottom-0 rounded-lg px-2 opacity-70 font-bold text-xs md:text-base'
+                        : 'text-gray-800 font-bold text-xs md:text-base'
+                }`}
+            >
+                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
+            </span>
+        </div>
+    </div>
+</div>
+
+
                   ))
                 )}
               </div>
