@@ -147,7 +147,19 @@ const Room = () => {
       };
     }, [socket]);
     
+    useEffect(() => {
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          router.push('/lobby'); // Redireciona para o lobby quando o usuário sai do navegador
+        }
+      };
   
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    }, [router]);
   
   
     const handleRevealAllClick = () => {
