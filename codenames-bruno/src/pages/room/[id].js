@@ -236,26 +236,18 @@ const Room = () => {
   const shouldShowBorder = isSpymaster && clickedCard && clickedCard.row === rowIndex && clickedCard.col === colIndex;
 
     return (
-      <div className="p-0 md:p-4 h-screen w-screen">
+      <div className="p-0 md:p-4 h-screen w-screen bg-slate-950">
         <div className="flex flex-col md:flex-row w-screen gap-x-4">
-          <div className="flex flex-col">
-            <h1 className="text-4xl font-bold mb-4">
+          <div className="flex flex-col w-full justify-center items-center mt-10">
+            <h1 className="text-4xl font-bold mb-4 text-white">
               Room: {roomId || "Loading..."}
             </h1>
-            <h2 className="text-lg">
-              Game Status:{" "}
-              {gameStatus === "playing" ? (
-                <span className="text-emerald-400 font-bold">In Progress</span>
-              ) : (
-                <span className="text-[#f87171] font-bold">Game Over</span>
-              )}
-            </h2>
-            <p className="text-[#f87171] font-bold">
-              Red Cards Remaining: {redCardsRemaining}
-            </p>
-            <p className="text-[#60a5fa] font-bold">
-              Blue Cards Remaining: {blueCardsRemaining}
-            </p>
+            <div className="flex gap-x-1">
+              <p className="text-[#f87171] font-bold">{redCardsRemaining}</p>
+              <span className="text-white">-</span>
+              <p className="text-[#60a5fa] font-bold">{blueCardsRemaining}</p>
+            </div>
+
             <div className="flex gap-x-2 mt-1">
               <button
                 onClick={handleRevealAllClick}
@@ -270,69 +262,90 @@ const Room = () => {
                 Reset
               </button>
             </div>
+            {gameStatus === "playing" ? null : (
+              <>
+                <h2 className="text-lg text-white mt-5">
+                  {gameStatus === "playing" ? null : (
+                    <span className="text-white font-bold text-2xl blink-animation">Game Over</span>
+                  )}
+                </h2>
+              </>
+            )}
           </div>
-          <div className="w-full h-full flex justify-center items-center mr-60 mt-20 md:mt-0">
+          <div className="w-full h-full flex justify-center items-center mr-60 mt-10 md:mt-0">
             {board.length > 0 ? (
               <div className="grid grid-cols-5 gap-2 md:gap-5">
                 {board.map((row, rowIndex) =>
                   row.map((cell, colIndex) => (
-<div
-    key={`${rowIndex}-${colIndex}`}
-    onClick={() => handleCellClick(rowIndex, colIndex)}
-    className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in ${
-        clickedCards.some(card => card.row === rowIndex && card.col === colIndex && revealedBySpymaster) // Verifica se o card está na lista de clicados
-        ? 'border-4 border-yellow-500'
-        : ''
-    }`}
->
-    <div
-        className={`w-full h-full relative transform-style-preserve-3d transition-transform duration-500 ${
-            cell.revealed || revealedBySpymaster ? 'rotate-y-180' : ''
-        }`}
-    >
-        <div
-            className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                cell.revealed || revealedBySpymaster ? getCellColor(cell.category) : 'bg-white'
-            }`}
-        >
-            <span
-                className={`text-lg ${
-                    cell.revealed || revealedBySpymaster
-                        ? cell.category === 'black'
-                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
-                            : 'text-white font-bold text-xs md:text-base'
-                        : 'text-gray-800 font-bold text-xs md:text-base'
-                }`}
-            >
-                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
-            </span>
-        </div>
-        <div
-            className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                cell.revealed || revealedBySpymaster ? getCellColor(cell.category) : 'bg-white font-bold'
-            }`}
-        >
-            <div
-                className={`absolute bottom-0 w-full h-5 md:h-10 ${
-                    (cell.revealed || revealedBySpymaster) && 'bg-gradient-to-t from-black'
-                }`}
-            ></div>
-            <span
-                className={`text-lg ${
-                    cell.revealed || revealedBySpymaster
-                        ? cell.category === 'black'
-                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
-                            : 'text-white absolute bottom-0 rounded-lg px-2 opacity-80 font-bold text-xs md:text-base'
-                        : 'text-gray-800 font-bold text-xs md:text-base'
-                }`}
-            >
-                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
-            </span>
-        </div>
-    </div>
-</div>
-
-
+                    <div
+                      key={`${rowIndex}-${colIndex}`}
+                      onClick={() => handleCellClick(rowIndex, colIndex)}
+                      className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in ${
+                        clickedCards.some(
+                          (card) =>
+                            card.row === rowIndex &&
+                            card.col === colIndex &&
+                            revealedBySpymaster
+                        ) // Verifica se o card está na lista de clicados
+                          ? "border-4 border-yellow-400"
+                          : ""
+                      }`}
+                    >
+                      <div
+                        className={`w-full h-full relative transform-style-preserve-3d transition-transform duration-500 ${
+                          cell.revealed || revealedBySpymaster
+                            ? "rotate-y-180"
+                            : ""
+                        }`}
+                      >
+                        <div
+                          className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
+                            cell.revealed || revealedBySpymaster
+                              ? getCellColor(cell.category)
+                              : "bg-white"
+                          }`}
+                        >
+                          <span
+                            className={`text-lg ${
+                              cell.revealed || revealedBySpymaster
+                                ? cell.category === "black"
+                                  ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
+                                  : "text-white font-bold text-xs md:text-base"
+                                : "text-gray-800 font-bold text-xs md:text-base"
+                            }`}
+                          >
+                            {cell.word.charAt(0).toUpperCase() +
+                              cell.word.slice(1)}
+                          </span>
+                        </div>
+                        <div
+                          className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
+                            cell.revealed || revealedBySpymaster
+                              ? getCellColor(cell.category)
+                              : "bg-white font-bold"
+                          }`}
+                        >
+                          <div
+                            className={`absolute bottom-0 w-full h-5 md:h-10 ${
+                              (cell.revealed || revealedBySpymaster) &&
+                              "bg-gradient-to-t from-black"
+                            }`}
+                          ></div>
+                          <span
+                            className={`text-lg ${
+                              cell.revealed || revealedBySpymaster
+                                ? cell.category === "black"
+                                  ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
+                                  : "text-white absolute bottom-0 rounded-lg px-2 opacity-80 font-bold text-xs md:text-base"
+                                : "text-gray-800 font-bold text-xs md:text-base"
+                            }`}
+                          >
+                            {cell.word.charAt(0).toUpperCase() +
+                              cell.word.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   ))
                 )}
               </div>
