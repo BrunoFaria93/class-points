@@ -4,45 +4,48 @@ import io from 'socket.io-client';
 import words from "../../resources/words.json";
 
 const generateBoard = (words) => {
-    // Defina a quantidade específica de cada tipo de carta
-    const cardCounts = {
-        red: 9,
-        blue: 8,
-        gray: 7,
-        black: 1,
-    };
+  // Defina a quantidade específica de cada tipo de carta
+  const cardCounts = {
+      red: 9,
+      blue: 8,
+      gray: 7,
+      black: 1,
+  };
 
-    // Verifique se há pelo menos 25 palavras
-    if (words.length < 25) {
-        throw new Error('O array de palavras deve conter pelo menos 25 palavras.');
-    }
+  // Remova duplicatas do array de palavras e verifique se há pelo menos 25 palavras únicas
+  const uniqueWords = Array.from(new Set(words));
 
-    // Embaralhe as palavras e selecione 25 únicas
-    const shuffledWords = words.sort(() => Math.random() - 0.5).slice(0, 25);
+  if (uniqueWords.length < 25) {
+      throw new Error('O array de palavras deve conter pelo menos 25 palavras únicas.');
+  }
 
-    // Crie uma lista de cartões com base nas contagens específicas
-    const cards = [
-        ...Array(cardCounts.red).fill({ category: 'red' }),
-        ...Array(cardCounts.blue).fill({ category: 'blue' }),
-        ...Array(cardCounts.gray).fill({ category: 'neutral' }),
-        { category: 'black' }
-    ];
+  // Embaralhe as palavras e selecione 25 únicas
+  const shuffledWords = uniqueWords.sort(() => Math.random() - 0.5).slice(0, 25);
 
-    // Embaralhe os cartões
-    const shuffledCards = cards.sort(() => Math.random() - 0.5);
+  // Crie uma lista de cartões com base nas contagens específicas
+  const cards = [
+      ...Array(cardCounts.red).fill({ category: 'red' }),
+      ...Array(cardCounts.blue).fill({ category: 'blue' }),
+      ...Array(cardCounts.gray).fill({ category: 'neutral' }),
+      { category: 'black' },
+  ];
 
-    // Crie o tabuleiro 5x5 usando os cartões embaralhados
-    const board = [];
-    for (let i = 0; i < 5; i++) {
-        board.push(shuffledCards.slice(i * 5, i * 5 + 5).map((card, index) => ({
-            word: shuffledWords[i * 5 + index],
-            revealed: false,
-            category: card.category,
-        })));
-    }
-    
-    return board;
+  // Embaralhe os cartões
+  const shuffledCards = cards.sort(() => Math.random() - 0.5);
+
+  // Crie o tabuleiro 5x5 usando os cartões embaralhados
+  const board = [];
+  for (let i = 0; i < 5; i++) {
+      board.push(shuffledCards.slice(i * 5, i * 5 + 5).map((card, index) => ({
+          word: shuffledWords[i * 5 + index],
+          revealed: false,
+          category: card.category,
+      })));
+  }
+
+  return board;
 };
+
 
 
 
@@ -208,6 +211,7 @@ const Room = () => {
       setClickedCards([])
       const newBoard = generateBoard(words);
       setBoard(newBoard);
+      setRevealedBySpymaster(false)
       setGameStatus('playing');
       setBlackWordRevealed(false);
       setRedCardsRemaining(9);
@@ -260,75 +264,63 @@ const Room = () => {
               <div className="grid grid-cols-5 gap-2 md:gap-5">
                 {board.map((row, rowIndex) =>
                   row.map((cell, colIndex) => (
-                    <div
-                      key={`${rowIndex}-${colIndex}`}
-                      onClick={() => handleCellClick(rowIndex, colIndex)}
-                      className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in ${
-                        clickedCards.some(
-                          (card) =>
-                            card.row === rowIndex &&
-                            card.col === colIndex &&
-                            revealedBySpymaster
-                        ) // Verifica se o card está na lista de clicados
-                          ? "border-4 border-yellow-500"
-                          : ""
-                      }`}
-                    >
-                      <div
-                        className={`w-full h-full relative transform-style-preserve-3d transition-transform duration-500 ${
-                          cell.revealed || revealedBySpymaster
-                            ? "rotate-y-180"
-                            : ""
-                        }`}
-                      >
-                        <div
-                          className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                            cell.revealed || revealedBySpymaster
-                              ? getCellColor(cell.category)
-                              : "bg-white"
-                          }`}
-                        >
-                          <span
-                            className={`text-lg ${
-                              cell.revealed || revealedBySpymaster
-                                ? cell.category === "black"
-                                  ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
-                                  : "text-white font-bold text-xs md:text-base"
-                                : "text-gray-800 font-bold text-xs md:text-base"
-                            }`}
-                          >
-                            {cell.word.charAt(0).toUpperCase() +
-                              cell.word.slice(1)}
-                          </span>
-                        </div>
-                        <div
-                          className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
-                            cell.revealed || revealedBySpymaster
-                              ? getCellColor(cell.category)
-                              : "bg-white font-bold"
-                          }`}
-                        >
-                          <div
-                            className={`absolute bottom-0 w-full h-5 md:h-10 ${
-                              (cell.revealed || revealedBySpymaster) &&
-                              "bg-gradient-to-t from-black"
-                            }`}
-                          ></div>
-                          <span
-                            className={`text-lg ${
-                              cell.revealed || revealedBySpymaster
-                                ? cell.category === "black"
-                                  ? "text-white font-bold absolute bottom-0 text-xs md:text-base"
-                                  : "text-white absolute bottom-0 rounded-lg px-2 opacity-70 font-bold text-xs md:text-base"
-                                : "text-gray-800 font-bold text-xs md:text-base"
-                            }`}
-                          >
-                            {cell.word.charAt(0).toUpperCase() +
-                              cell.word.slice(1)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+<div
+    key={`${rowIndex}-${colIndex}`}
+    onClick={() => handleCellClick(rowIndex, colIndex)}
+    className={`w-16 md:w-32 h-16 md:h-32 perspective hover:scale-110 transition-all ease-in ${
+        clickedCards.some(card => card.row === rowIndex && card.col === colIndex && revealedBySpymaster) // Verifica se o card está na lista de clicados
+        ? 'border-4 border-yellow-500'
+        : ''
+    }`}
+>
+    <div
+        className={`w-full h-full relative transform-style-preserve-3d transition-transform duration-500 ${
+            cell.revealed || revealedBySpymaster ? 'rotate-y-180' : ''
+        }`}
+    >
+        <div
+            className={`absolute w-full h-full backface-hidden flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
+                cell.revealed || revealedBySpymaster ? getCellColor(cell.category) : 'bg-white'
+            }`}
+        >
+            <span
+                className={`text-lg ${
+                    cell.revealed || revealedBySpymaster
+                        ? cell.category === 'black'
+                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
+                            : 'text-white font-bold text-xs md:text-base'
+                        : 'text-gray-800 font-bold text-xs md:text-base'
+                }`}
+            >
+                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
+            </span>
+        </div>
+        <div
+            className={`absolute w-full h-full backface-hidden rotate-y-180 flex items-center justify-center border border-gray-300 cursor-pointer rounded ${
+                cell.revealed || revealedBySpymaster ? getCellColor(cell.category) : 'bg-white font-bold'
+            }`}
+        >
+            <div
+                className={`absolute bottom-0 w-full h-5 md:h-10 ${
+                    (cell.revealed || revealedBySpymaster) && 'bg-gradient-to-t from-black'
+                }`}
+            ></div>
+            <span
+                className={`text-lg ${
+                    cell.revealed || revealedBySpymaster
+                        ? cell.category === 'black'
+                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
+                            : 'text-white absolute bottom-0 rounded-lg px-2 opacity-70 font-bold text-xs md:text-base'
+                        : 'text-gray-800 font-bold text-xs md:text-base'
+                }`}
+            >
+                {cell.word.charAt(0).toUpperCase() + cell.word.slice(1)}
+            </span>
+        </div>
+    </div>
+</div>
+
+
                   ))
                 )}
               </div>
