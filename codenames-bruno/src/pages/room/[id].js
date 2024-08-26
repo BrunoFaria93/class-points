@@ -284,11 +284,11 @@ const Room = () => {
             }`}
         >
             <span
-                className={`${
+                className={`text-lg ${
                     cell.revealed || revealedBySpymaster
                         ? cell.category === 'black'
-                            ? 'text-white font-bold absolute bottom-0 text-[8px] md:text-base'
-                            : 'text-white font-bold text-[8px] md:text-base'
+                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
+                            : 'text-white font-bold text-xs md:text-base'
                         : 'text-gray-800 font-bold text-xs md:text-base'
                 }`}
             >
@@ -309,8 +309,8 @@ const Room = () => {
                 className={`text-lg ${
                     cell.revealed || revealedBySpymaster
                         ? cell.category === 'black'
-                            ? 'text-white font-bold  -bottom-2  absolute text-[8px] md:text-base'
-                            : 'text-white absolute -bottom-2 md:bottom-0 rounded-lg px-2 opacity-80 font-bold text-[8px] md:text-base'
+                            ? 'text-white font-bold absolute bottom-0 text-xs md:text-base'
+                            : 'text-white absolute bottom-0 rounded-lg px-2 opacity-80 font-bold text-xs md:text-base'
                         : 'text-gray-800 font-bold text-xs md:text-base'
                 }`}
             >
