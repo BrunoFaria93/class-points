@@ -108,8 +108,8 @@ export default function Upload() {
       ...doc.data()
     }));
     setUsers(usersList);
-
   };
+  console.log("users ",users)
   useEffect(() => {
     console.log("Users atualizado:", users);
   }, [users]); 

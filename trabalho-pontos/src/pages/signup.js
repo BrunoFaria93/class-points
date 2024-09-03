@@ -32,15 +32,31 @@ export default function SignUp() {
 
   const handleSignUp = async (e) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
+  
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Armazenar o tempo de login
+      // Cria o usuário com email e senha
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+  
+      // Cria um documento no Firestore para o novo usuário
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        createdAt: new Date(),
+      });
+  
+      // Armazena o tempo de login
       localStorage.setItem('loginTime', Date.now());
       router.push('/upload');
     } catch (error) {
       console.error('Erro ao fazer cadastro:', error);
+      setError('Erro ao fazer cadastro. Tente novamente.');
     }
   };
+  
   
 
   return (
