@@ -26,12 +26,12 @@ export default function Login() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black">
       <Image 
-        src="/class.png" 
+        src="/classp.png" 
         alt="Class" 
-        width={180} 
-        height={180} 
+        width={200} 
+        height={200} 
       />
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
         <h2 className="text-2xl font-bold text-center text-slate-900">Login</h2>
@@ -70,7 +70,7 @@ export default function Login() {
           <div>
             <button
               type="submit"
-              className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 font-medium text-white bg-yellow-500 rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Entrar
             </button>
@@ -78,7 +78,7 @@ export default function Login() {
         </form>
           <div className='flex justify-between w-full text-slate-500 gap-x-20 text-xs'>
             Não tem uma conta?{' '}
-            <div className="hover:underline text-indigo-500 text-xs">
+            <div className="hover:underline text-yellow-600 text-xs">
               <Link href="/signup/">Cadastre-se</Link>
             </div>
           </div>

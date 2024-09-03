@@ -60,11 +60,11 @@ export default function SignUp() {
   
 
   return (
-    <div className="flex-col items-center justify-center min-h-screen bg-slate-900">
+    <div className="flex-col mt-5 items-center justify-center min-h-screen bg-black">
       <div className='flex justify-center items-center mx-auto'>
-      <Image src="/class.png" alt="Class" width={180} height={180} />
+      <Image src="/classp.png" alt="Class" width={200} height={200} />
       </div>
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
+      <div className="w-full mx-auto md:w-[50vw] lg:w-[30vw] p-8 space-y-8 bg-white rounded-lg shadow-lg">
         <h2 className="text-2xl font-bold text-center text-slate-900">
           Cadastrar
         </h2>
@@ -129,7 +129,7 @@ export default function SignUp() {
           <div>
             <button
               type="submit"
-              className="w-full px-4 py-2 font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 font-medium text-white bg-yellow-500 rounded-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Cadastrar
             </button>
@@ -137,7 +137,7 @@ export default function SignUp() {
         </form>
         <div className="flex justify-between w-full text-slate-500 gap-x-20 text-xs">
           Já tem uma conta?{" "}
-          <div className="hover:underline text-indigo-500 text-xs">
+          <div className="hover:underline text-yellow-600 text-xs">
               <Link href="/login/"> Faça login</Link>
             </div>
         </div>

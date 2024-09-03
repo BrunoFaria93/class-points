@@ -21,7 +21,7 @@ export default function Upload() {
   const [rejectedFileId, setRejectedFileId] = useState(null); 
   const taskLabel = selectedTask ? selectedTask?.label : '';
   const [showRejectInput, setShowRejectInput] = useState(false);
-
+  const [loading, setLoading] = useState(false)
   const router = useRouter();
 
   const tasks = [
@@ -109,12 +109,11 @@ export default function Upload() {
     }));
     setUsers(usersList);
   };
-  console.log("users ",users)
   useEffect(() => {
-    console.log("Users atualizado:", users);
   }, [users]); 
   const fetchUploadedFiles = async () => {
     try {
+      setLoading(true)
       const filesRef = collection(db, 'uploadedFiles');
       const filesSnap = await getDocs(filesRef);
       const filesList = await Promise.all(filesSnap.docs.map(async (doc) => {
@@ -127,7 +126,9 @@ export default function Upload() {
         };
       }));
       setUploadedFiles(filesList);
+      setLoading(false)
     } catch (error) {
+      setLoading(false)
       console.error('Erro ao buscar arquivos:', error);
     }
   };
@@ -161,9 +162,11 @@ export default function Upload() {
     }
   };
   const handleAcceptClick = async (fileId) => {
+    setShowRejectInput(false)
     await handleUpdateStatus(fileId, 'Aceito');
   };
   const handleFinalizarClick = async (fileId) => {
+    setShowRejectInput(false)
     await handleUpdateStatus(fileId, 'Finalizado');
   };
   const [updateFlag, setUpdateFlag] = useState(false);
@@ -206,16 +209,23 @@ export default function Upload() {
             handleAdjustPoints(points, "add");
           } else if (fileData.status === "Aceito" && status === "Finalizado") {
             handleAdjustPoints(points, "deduct");
+          } else if (fileData.status === "Finalizado" && status === "Aceito") {
+            alert('Documento já foi finalizado.');
+            setShowRejectInput(false)
+            return
+          } else if (fileData.status === "Finalizado" && status === "Rejeitado") {
+            alert('Documento já foi finalizado.');
+            setShowRejectInput(false)
+            return
           }
         }
       } else {
         console.log("Documento não encontrado.");
       }
-  
-      await updateDoc(fileRef, { status });
-      await updateUserPoints(fileId, status);
-      await fetchUsers(); // Buscando os usuários atualizados após as mudanças
-      setUpdateFlag(prev => !prev); // Alterna o flag para forçar a re-renderização
+        await updateDoc(fileRef, { status });
+        await updateUserPoints(fileId, status);
+        await fetchUsers(); // Buscando os usuários atualizados após as mudanças
+        setUpdateFlag(prev => !prev); // Alterna o flag para forçar a re-renderização
     } catch (error) {
       console.error("Erro ao atualizar o status:", error);
     }
@@ -235,7 +245,6 @@ export default function Upload() {
       const fileRef = ref(storage, `uploads/${fileData.fileName}`);
       try {
         // Verificar o caminho do arquivo
-        console.log(`Fetching URL for file: ${fileData.fileName}`);
         const downloadURL = await getDownloadURL(fileRef);
         return {
           id: doc.id,
@@ -328,14 +337,12 @@ export default function Upload() {
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
             setUploadProgress(progress);
-            console.log(`Upload is ${progress}% done`);
           },
           (error) => {
             console.error('Upload failed:', error);
           },
           async () => {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log('File available at', downloadURL);
             const newFileDoc = doc(db, 'uploadedFiles', `${auth.currentUser.uid}_${newFileName}`);
             await setDoc(newFileDoc, {
               fileName: newFileName,
@@ -418,36 +425,13 @@ const fetchFiles = async () => {
       id: doc.id,
       ...doc.data()
     }));
-    console.log("Arquivos atualizados:", filesList);
   } catch (error) {
     console.error("Erro ao buscar os arquivos:", error);
   }
 };
-const handleFinalizeClick= async (fileId) => {
-  try {
-    const points = extractPointsFromDescription(fileId);
-
-    const fileRef = doc(db, 'uploadedFiles', fileId);
-    const fileSnap = await getDoc(fileRef);
-
-    if (fileSnap.exists()) {
-      const fileData = fileSnap.data();
-      if (fileData.status === "Aceito") {
-        handleAdjustPoints(points, "deduct");
-      }
-    }
-    
-    // Excluir o documento
-    await deleteDoc(fileRef);
-    // Atualizar a lista de arquivos após a exclusão
-    await fetchFiles(); // Supondo que você tenha uma função para buscar os arquivos novamente
-    setUpdateFlag(prev => !prev); // Atualizar a interface para refletir a exclusão
-    console.log("Documento excluído com sucesso:", fileId);
-    await fetchUsers(); 
-  } catch (error) {
-    console.error("Erro ao excluir o documento:", error);
-  }
-};
+useEffect(() => {
+  fetchFiles();
+}, [updateFlag]);
 const finalizadoTasks = tasks.filter(task =>
   uploadedFiles.some(file => file.taskId === task.id && file.status === "Finalizado")
 );
@@ -457,10 +441,8 @@ const activeTasks = tasks.filter(task =>
   !finalizadoTasks.some(finalTask => finalTask.id === task.id)
 );
 
-console.log("taskts", tasks)
-console.log("selectedUserId",selectedUserId)
 return (
-  <div className="flex flex-col items-center p-4  pb-10 font-sans text-black h-full w-screen bg-slate-100 md:bg-slate-800">
+  <div className="flex flex-col items-center p-4 overflow-y-auto pb-10 font-sans text-black h-screen w-screen bg-slate-100 md:bg-gray-900">
     <header className="w-full flex justify-between items-center mb-4">
       <button
         onClick={handleLogout}
@@ -498,12 +480,12 @@ return (
                   <p key={user.id} className="text-lg font-semibold">
                     Pontos do Usuário:{" "}
                     <span className="font-bold text-green-500">
-                      {user.points}
+                      {user.points ?? 0}
                     </span>
                   </p>
                 ))
             ) : (
-              <p className="text-gray-500 text-center">
+              <p className="text-gray-500 text-start">
                 Selecione um usuário para ver os pontos.
               </p>
             )}
@@ -583,7 +565,11 @@ return (
                                     </button>
                                     <button
                                       onClick={() => handleRejectClick(file.id)}
-                                      className={`px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700`}
+                                      className={
+                                        file.status === "Finalizado"
+                                          ? `px-4 py-2 bg-red-600 text-white cursor-not-allowed pointer-events-none rounded-md hover:bg-red-700`
+                                          : `px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700`
+                                      }
                                     >
                                       Rejeitar
                                     </button>
@@ -628,7 +614,9 @@ return (
                     </div>
                   ))
               ) : (
-                <>Selecione um usuário para ver as tarefas.</>
+                <p className="text-gray-500 text-start">
+                  Selecione um usuário para ver as tarefas.
+                </p>
               )}
             </ul>
           </div>
@@ -680,65 +668,77 @@ return (
               <h3 className="text-lg font-semibold mb-2 text-black">
                 Meus Arquivos
               </h3>
-              <ul className="list-disc">
-                {tasks
-                  .filter((task) =>
+              {loading ? (
+                <div className="flex justify-center items-center h-20">
+                  <div className="flex space-x-2">
+                    <div className="w-4 h-4 bg-gray-500 rounded-full animate-pulse"></div>
+                    <div className="w-4 h-4 bg-gray-500 rounded-full animate-pulse delay-150"></div>
+                    <div className="w-4 h-4 bg-gray-500 rounded-full animate-pulse delay-300"></div>
+                  </div>
+                </div>
+              ) : (
+                <ul className="list-disc">
+                  {tasks
+                    .filter((task) =>
+                      uploadedFiles.some(
+                        (file) =>
+                          file.taskId === task.id && file.userId === userId
+                      )
+                    )
+                    .map((task) => (
+                      <div key={task.id} className="mb-4">
+                        <h3 className="font-semibold text-sm text-black">
+                          {task.label}
+                        </h3>
+                        <ul className="list-disc">
+                          {uploadedFiles
+                            .filter(
+                              (file) =>
+                                file.taskId === task.id &&
+                                file.userId === userId
+                            )
+                            .map((file) => (
+                              <li key={file.id} className="mb-2 list-none">
+                                <div className="flex">
+                                  <p className="font-semibold mr-1 text-sm text-slate-600">
+                                    Status:
+                                  </p>{" "}
+                                  <span
+                                    className={`font-bold ${
+                                      file.status === "Rejeitado"
+                                        ? "text-red-500 text-sm"
+                                        : file.status === "Aceito"
+                                        ? "text-green-500 text-sm"
+                                        : "text-orange-500 text-sm"
+                                    }`}
+                                  >
+                                    {file.status}
+                                  </span>
+                                </div>
+
+                                {file.status === "Rejeitado" && (
+                                  <div className="flex">
+                                    <span className="font-semibold mr-1 text-sm">
+                                      Motivo:
+                                    </span>
+                                    <span className="text-sm">
+                                      {file.rejectionReason}
+                                    </span>
+                                  </div>
+                                )}
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    ))}
+                  {tasks.filter((task) =>
                     uploadedFiles.some(
                       (file) =>
                         file.taskId === task.id && file.userId === userId
                     )
-                  )
-                  .map((task) => (
-                    <div key={task.id} className="mb-4">
-                      <h3 className="font-semibold text-sm text-black">
-                        {task.label}
-                      </h3>
-                      <ul className="list-disc">
-                        {uploadedFiles
-                          .filter(
-                            (file) =>
-                              file.taskId === task.id && file.userId === userId
-                          )
-                          .map((file) => (
-                            <li key={file.id} className="mb-2 list-none">
-                              <div className="flex">
-                                <p className="font-semibold mr-1 text-sm text-slate-600">
-                                  Status:
-                                </p>{" "}
-                                <span
-                                  className={`font-bold ${
-                                    file.status === "Rejeitado"
-                                      ? "text-red-500 text-sm"
-                                      : file.status === "Aceito"
-                                      ? "text-green-500 text-sm"
-                                      : "text-orange-500 text-sm"
-                                  }`}
-                                >
-                                  {file.status}
-                                </span>
-                              </div>
-
-                              {file.status === "Rejeitado" && (
-                                <div className="flex">
-                                  <span className="font-semibold mr-1 text-sm">
-                                    Motivo:
-                                  </span>
-                                  <span className="text-sm">
-                                    {file.rejectionReason}
-                                  </span>
-                                </div>
-                              )}
-                            </li>
-                          ))}
-                      </ul>
-                    </div>
-                  ))}
-                {tasks.filter((task) =>
-                  uploadedFiles.some(
-                    (file) => file.taskId === task.id && file.userId === userId
-                  )
-                ).length === 0 && <>Sem arquivos</>}
-              </ul>
+                  ).length === 0 && <>Sem arquivos</>}
+                </ul>
+              )}
             </div>
           </div>
         </div>
