@@ -9,6 +9,7 @@ export default function Upload() {
   const [file, setFile] = useState([]); 
   const [reason, setReason] = useState(""); 
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [userId, setUserId] = useState("")
   const [userPoints, setUserPoints] = useState(0);
   const [rejectingFileId, setRejectingFileId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -53,6 +54,7 @@ export default function Upload() {
               fetchUploadedFiles();
             } else {
               setIsAdmin(false);
+              setUserId(user.uid)
               fetchUserPoints(user.uid); // Atualiza os pontos do usuário
               fetchUploadedFilesForUser(user.uid);
               fetchFileStatusForUser(user.uid);
@@ -254,6 +256,13 @@ export default function Upload() {
   
     setUploadedFiles(filesList);
   };
+  useEffect(() => {
+    if (!isAdmin && auth.currentUser) {
+      fetchUploadedFilesForUser(auth.currentUser.uid);
+    } else if (isAdmin) {
+      fetchUploadedFiles(); // Administrador pode ver todos os arquivos
+    }
+  }, [isAdmin, auth.currentUser]);
   
   
   // Verifique o estado local para arquivos
@@ -448,6 +457,8 @@ const activeTasks = tasks.filter(task =>
   !finalizadoTasks.some(finalTask => finalTask.id === task.id)
 );
 
+console.log("taskts", tasks)
+console.log("selectedUserId",selectedUserId)
 return (
   <div className="flex flex-col items-center p-4  pb-10 font-sans text-black h-full w-screen bg-slate-100 md:bg-slate-800">
     <header className="w-full flex justify-between items-center mb-4">
@@ -670,58 +681,63 @@ return (
                 Meus Arquivos
               </h3>
               <ul className="list-disc">
-                {tasks.filter((task) =>
-                  uploadedFiles.some((file) => file.taskId === task.id)
-                ).length > 0 ? (
-                  tasks
-                    .filter((task) =>
-                      uploadedFiles.some((file) => file.taskId === task.id)
+                {tasks
+                  .filter((task) =>
+                    uploadedFiles.some(
+                      (file) =>
+                        file.taskId === task.id && file.userId === userId
                     )
-                    .map((task) => (
-                      <div key={task.id} className="mb-4">
-                        <h3 className="font-semibold text-sm text-black">
-                          {task.label}
-                        </h3>
-                        <ul className="list-disc">
-                          {uploadedFiles
-                            .filter((file) => file.taskId === task.id) // Filtra arquivos relacionados à tarefa atual
-                            .map((file) => (
-                              <li key={file.id} className="mb-2 list-none">
+                  )
+                  .map((task) => (
+                    <div key={task.id} className="mb-4">
+                      <h3 className="font-semibold text-sm text-black">
+                        {task.label}
+                      </h3>
+                      <ul className="list-disc">
+                        {uploadedFiles
+                          .filter(
+                            (file) =>
+                              file.taskId === task.id && file.userId === userId
+                          )
+                          .map((file) => (
+                            <li key={file.id} className="mb-2 list-none">
+                              <div className="flex">
+                                <p className="font-semibold mr-1 text-sm text-slate-600">
+                                  Status:
+                                </p>{" "}
+                                <span
+                                  className={`font-bold ${
+                                    file.status === "Rejeitado"
+                                      ? "text-red-500 text-sm"
+                                      : file.status === "Aceito"
+                                      ? "text-green-500 text-sm"
+                                      : "text-orange-500 text-sm"
+                                  }`}
+                                >
+                                  {file.status}
+                                </span>
+                              </div>
+
+                              {file.status === "Rejeitado" && (
                                 <div className="flex">
-                                  <p className="font-semibold mr-1 text-sm text-slate-600">
-                                    Status:
-                                  </p>{" "}
-                                  <span
-                                    className={`font-bold ${
-                                      file.status === "Rejeitado"
-                                        ? "text-red-500 text-sm"
-                                        : file.status === "Aceito"
-                                        ? "text-green-500 text-sm"
-                                        : "text-orange-500 text-sm"
-                                    }`}
-                                  >
-                                    {file.status}
+                                  <span className="font-semibold mr-1 text-sm">
+                                    Motivo:
+                                  </span>
+                                  <span className="text-sm">
+                                    {file.rejectionReason}
                                   </span>
                                 </div>
-
-                                {file.status === "Rejeitado" && (
-                                  <div className="flex">
-                                    <span className="font-semibold mr-1 text-sm">
-                                      Motivo:
-                                    </span>
-                                    <span className="text-sm">
-                                      {file.rejectionReason}
-                                    </span>
-                                  </div>
-                                )}
-                              </li>
-                            ))}
-                        </ul>
-                      </div>
-                    ))
-                ) : (
-                  <>Sem arquivos</>
-                )}
+                              )}
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  ))}
+                {tasks.filter((task) =>
+                  uploadedFiles.some(
+                    (file) => file.taskId === task.id && file.userId === userId
+                  )
+                ).length === 0 && <>Sem arquivos</>}
               </ul>
             </div>
           </div>
