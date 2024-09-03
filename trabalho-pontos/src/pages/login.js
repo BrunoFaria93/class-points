@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from "../firebase/firebaseConfig"
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -10,7 +11,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -77,9 +78,9 @@ export default function Login() {
         </form>
           <div className='flex justify-between w-full text-slate-500 gap-x-20 text-xs'>
             Não tem uma conta?{' '}
-            <a href="/signup" className="hover:underline text-indigo-500 text-xs">
-              Cadastre-se
-            </a>
+            <div className="hover:underline text-indigo-500 text-xs">
+              <Link href="/signup/">Cadastre-se</Link>
+            </div>
           </div>
       </div>
     </div>

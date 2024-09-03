@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebase/firebaseConfig'; // Importando a configuração do Firebase
 import { doc, setDoc } from 'firebase/firestore';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function SignUp() {
   const [email, setEmail] = useState('');
@@ -120,9 +121,9 @@ export default function SignUp() {
         </form>
         <div className="flex justify-between w-full text-slate-500 gap-x-20 text-xs">
           Já tem uma conta?{" "}
-          <a href="/login" className="text-indigo-600 hover:underline text-xs">
-            Faça login
-          </a>
+          <div className="hover:underline text-indigo-500 text-xs">
+              <Link href="/login/"> Faça login</Link>
+            </div>
         </div>
       </div>
     </div>
